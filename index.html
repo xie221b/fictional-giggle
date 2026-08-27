@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Life Architecture · 生活架构</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#F4F1EA">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">Life Architecture</div>
+    <nav class="nav" id="nav">
+      <button class="nav-btn active" data-view="dashboard">总览</button>
+      <button class="nav-btn" data-view="finance">资金与消费</button>
+      <button class="nav-btn" data-view="baking">烘焙工坊</button>
+      <button class="nav-btn" data-view="planner">日程与日历</button>
+      <button class="nav-btn" data-view="media">内容工坊</button>
+      <button class="nav-btn" data-view="thinking">口语与思考</button>
+      <button class="nav-btn" data-view="copy">✎ 文案编辑</button>
+      <button class="nav-btn" data-view="appearance">🎨 外观</button>
+      <button class="nav-btn" data-view="monthly">📊 月报</button>
+    </nav>
+    <div class="topbar-right">
+      <button class="btn small ghost" id="btnEditText">✎ 改字</button>
+      <button class="btn small ghost" id="btnBackup">备份</button>
+      <button class="btn small ghost" id="btnRestore">恢复</button>
+      <input type="file" id="restoreFile" accept=".json" hidden>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ================= 总览 ================= -->
+  <section id="view-dashboard" class="view active">
+    <div class="hero">
+      <h1 data-text="heroTitle">把日子过得明白</h1>
+      <p class="sub" data-text="heroSub">本月预算 ¥<span id="dashBudget"></span> · 已花 ¥<span id="dashSpent"></span> · 剩余 ¥<span id="dashLeft"></span></p>
+      <div class="hero-alerts" id="dashAlerts"></div>
+    </div>
+    <div class="grid-3">
+      <div class="card"><h3 data-text="pools">预算池</h3><div id="dashPools"></div></div>
+      <div class="card"><h3 data-text="pending">待购冷静期</h3><div id="dashPending"></div></div>
+      <div class="card"><h3 data-text="watch">需要留意</h3><div id="dashWatch"></div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card"><h3 data-text="week">近 7 天安排</h3><div id="dashWeek"></div></div>
+      <div class="card"><h3 data-text="expiry">临期食材</h3><div id="dashExpiry"></div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card"><h3 data-text="reimburse">报销追踪</h3><div id="dashReimburse"></div></div>
+      <div class="card"><h3 data-text="streak">行动打卡</h3><div id="dashStreak"></div></div>
+    </div>
+  </section>
+
+  <!-- ================= 资金与消费 ================= -->
+  <section id="view-finance" class="view">
+    <div class="grid-3">
+      <div class="card">
+        <h3>预算大盘</h3>
+        <div class="form-row"><label>月度生活费（¥）</label><input type="number" id="fBudget" min="0" step="100"></div>
+        <div id="fPools"></div>
+        <button class="btn small full" id="fSaveBudget">保存分配</button>
+      </div>
+      <div class="card">
+        <h3>记一笔支出</h3>
+        <form id="fExpenseForm">
+          <div class="form-row"><label>日期</label><input type="date" id="fExpDate"></div>
+          <div class="form-row"><label>金额（¥）</label><input type="number" id="fExpAmount" min="0" step="0.01" required></div>
+          <div class="form-row"><label>预算池</label>
+            <select id="fExpPool">
+              <option value="must">必须支出</option>
+              <option value="hobby">轻度爱好</option>
+              <option value="street">潮牌基金</option>
+            </select>
+          </div>
+          <div class="form-row"><label>分类</label><select id="fExpCat"></select></div>
+          <div class="form-row"><label>标记</label>
+            <select id="fExpTag">
+              <option value="">无</option>
+              <option value="emo">[非必要情绪消费]</option>
+              <option value="ship">[国际运费分摊]</option>
+              <option value="gacha">[盲盒/扭蛋冲动支出]</option>
+            </select>
+          </div>
+          <div class="form-row"><label>报销属性</label>
+            <select id="fExpReimb">
+              <option value="">自费</option>
+              <option value="direct">可直接报销</option>
+              <option value="probable">概率报销</option>
+            </select>
+          </div>
+          <div class="form-row"><label>备注</label><input id="fExpNote" placeholder="买了什么"></div>
+          <button class="btn full" type="submit">保存支出</button>
+        </form>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <h3>账单导入（支付宝/微信 CSV）</h3>
+          <p class="muted">仅解析：时间 · 金额 · 类别 · 备注，自动脱敏其余字段。</p>
+          <input type="file" id="billFile" accept=".csv,.txt" class="form-row" style="margin-bottom:8px">
+          <div id="billPreview" class="result-box"></div>
+        </div>
+        <div class="card">
+          <h3>运费核算（日代 vs 国内现货）</h3>
+          <div class="form-row"><label>国际运费合计（¥）</label><input type="number" id="fShipTotal" min="0" step="0.01"></div>
+          <div class="form-row"><label>本单件数</label><input type="number" id="fShipItems" min="1" step="1" value="1"></div>
+          <div class="form-row"><label>单品价格（¥）</label><input type="number" id="fShipPrice" min="0" step="0.01"></div>
+          <div class="form-row"><label>淘宝现货到手价（¥）</label><input type="number" id="fShipTb" min="0" step="0.01"></div>
+          <button class="btn small full" id="fShipCalc">核算</button>
+          <div id="fShipResult" class="result-box"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>待购清单（强制 24 小时冷静期）</h3>
+      <form class="inline-form" id="fPendingForm">
+        <input id="fPendName" placeholder="想买的东西" required>
+        <input type="number" id="fPendPrice" placeholder="预估价格 ¥" min="0" step="0.01">
+        <select id="fPendSource">
+          <option value="日代">日代</option>
+          <option value="淘宝">淘宝</option>
+          <option value="闲鱼">闲鱼</option>
+          <option value="店铺">线下店铺</option>
+        </select>
+        <input id="fPendUrl" placeholder="链接（可选）">
+        <button class="btn" type="submit">加入冷静期</button>
+      </form>
+      <div id="fPendingList"></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h3>报销追踪</h3>
+        <p class="muted">直接报销：爱好/家电 · 概率报销：实用萌物 · 自费：潮牌/相机。</p>
+        <div id="reimburseList"></div>
+      </div>
+      <div class="card">
+        <h3>话术生成器</h3>
+        <p class="muted">挑一笔待报销支出，生成柔和得体的沟通话术。</p>
+        <div class="toolbar">
+          <select id="reimbPick"></select>
+          <button class="btn small" id="reimbGen">生成话术</button>
+        </div>
+        <div id="reimbOut" class="gen-output"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>护肤品/化妆品拦截清单</h3>
+      <p class="muted">想买护肤/化妆品时强制提醒：以下存货还没用完，先清库存。</p>
+      <form class="inline-form" id="skincareForm">
+        <input id="skincareName" placeholder="存货名称（例：眼霜）" required>
+        <select id="skincareState">
+          <option value="未拆封">未拆封</option>
+          <option value="已拆封">已拆封</option>
+        </select>
+        <button class="btn" type="submit">加入存货</button>
+      </form>
+      <div id="skincareList"></div>
+    </div>
+
+    <div class="card">
+      <h3>本月支出流水</h3>
+      <div class="toolbar">
+        <input id="fSearch" placeholder="搜索流水…">
+        <select id="fFilterPool">
+          <option value="">全部预算池</option>
+          <option value="must">必须支出</option>
+          <option value="hobby">轻度爱好</option>
+          <option value="street">潮牌基金</option>
+        </select>
+      </div>
+      <div id="fExpenseList"></div>
+    </div>
+  </section>
+
+  <!-- ================= 烘焙工坊 ================= -->
+  <section id="view-baking" class="view">
+    <div class="grid-2">
+      <div class="card">
+        <h3>配方库</h3>
+        <form id="bRecipeForm">
+          <div class="form-row"><label>名称</label><input id="bRecTitle" placeholder="例：苹果派" required></div>
+          <div class="form-row"><label>来源</label>
+            <select id="bRecSource"><option>小红书</option><option>抖音</option><option>备忘录</option><option>纸质</option><option>其他</option></select>
+          </div>
+          <div class="form-row"><label>素材原链接</label><input id="bRecLink" placeholder="小红书/抖音原链接（可选）"></div>
+          <div class="form-row"><label>份量（几人份）</label><input type="number" id="bRecServings" min="1" value="1"></div>
+          <div class="form-row"><label>原料（克重/配比）</label>
+            <div id="bIngRows"></div>
+            <button type="button" class="btn tiny ghost" id="bAddIng">＋ 添加原料</button>
+          </div>
+          <div class="form-row"><label>制作流程（每行一步）</label><textarea id="bRecSteps" rows="4"></textarea></div>
+          <div class="form-row"><label>所需器材（逗号分隔）</label><input id="bRecEquip" placeholder="例：苹果派模具, 烤箱"></div>
+          <div class="form-row"><label>自改心得</label><input id="bRecNote" placeholder="口感、温度、替换后的成功经验…"></div>
+          <button class="btn full" type="submit">保存配方</button>
+        </form>
+        <div class="toolbar"><input id="bRecSearch" placeholder="搜索配方…"></div>
+        <div id="bRecipeList"></div>
+      </div>
+
+      <div class="stack">
+        <div class="card">
+          <h3>按配方自动扣减</h3>
+          <p class="muted">例：<code>我今天严格按配方做了一个苹果派</code></p>
+          <div class="inline-form">
+            <input id="bDeductInput" placeholder="说我做了什么…" style="flex:1">
+            <button class="btn" id="bDeductGo">扣减</button>
+          </div>
+          <div id="bDeductResult" class="result-box"></div>
+        </div>
+
+        <div class="card">
+          <h3>原料库存与临期提醒</h3>
+          <form class="inline-form" id="bInvForm">
+            <input id="bInvName" placeholder="原料" required>
+            <input type="number" id="bInvQty" placeholder="数量" min="0" step="0.01" required>
+            <select id="bInvUnit"><option>个</option><option>克</option><option>千克</option><option>盒</option><option>袋</option><option>瓶</option><option>毫升</option></select>
+            <input type="date" id="bInvExpiry" required>
+            <select id="bInvCat"><option value="水果">水果</option><option value="乳制品">乳制品</option><option value="面粉糖类">面粉糖类</option><option value="干货">干货</option><option value="其他">其他</option></select>
+            <button class="btn" type="submit">入库</button>
+          </form>
+          <div id="bInventory"></div>
+        </div>
+
+        <div class="card">
+          <h3>临期大消耗方案（无压力提醒）</h3>
+          <div id="bUseupPick"></div>
+          <button class="btn small" id="bUseupGo">推荐方案</button>
+          <div id="bUseupResult" class="result-box"></div>
+        </div>
+
+        <div class="card">
+          <h3>器材与进阶清单</h3>
+          <form class="inline-form" id="bEquipForm">
+            <input id="bEquipName" placeholder="器材名称" required>
+            <label class="check" style="margin:0"><input type="checkbox" id="bEquipOwned"> 已有</label>
+            <input type="number" id="bEquipPrice" placeholder="参考价 ¥" min="0" step="0.01">
+            <select id="bEquipFor">
+              <option value="">通用</option>
+              <option value="披萨/吐司">披萨/吐司</option>
+              <option value="蛋糕">蛋糕</option>
+              <option value="饼干">饼干</option>
+              <option value="派/挞">派/挞</option>
+            </select>
+            <button class="btn" type="submit">添加</button>
+          </form>
+          <div id="bEquipment"></div>
+          <div class="toolbar">
+            <label>想做 <input id="bNeedName" placeholder="品类或配方名（如：苹果派）"> 需要什么？</label>
+            <button class="btn small" id="bNeedCalc">比对</button>
+          </div>
+          <div id="bNeedResult" class="result-box"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 日程与日历 ================= -->
+  <section id="view-planner" class="view">
+    <div class="grid-2">
+      <div class="card">
+        <h3>自然语言排日程</h3>
+        <p class="muted">例：<code>下周三下午3点去游泳并买面粉</code> · 输出 .ics 代码可直接写入 iPhone/iPad 日历</p>
+        <div class="inline-form">
+          <input id="pNlInput" placeholder="直接说你的安排…" style="flex:1">
+          <button class="btn" id="pNlGo">解析</button>
+        </div>
+        <div id="pNlPreview" class="result-box"></div>
+
+        <div class="form-row"><label>或手动添加</label></div>
+        <form id="pTaskForm">
+          <div class="form-row"><label>事项</label><input id="pTaskTitle" required></div>
+          <div class="grid-2" style="gap:8px">
+            <div class="form-row"><label>日期</label><input type="date" id="pTaskDate" required></div>
+            <div class="form-row"><label>时间</label><input type="time" id="pTaskTime"></div>
+          </div>
+          <div class="grid-2" style="gap:8px">
+            <div class="form-row"><label>分类</label>
+              <select id="pTaskCat">
+                <option value="sports">体育运动（游泳）</option>
+                <option value="art">艺术兴趣（国画/美甲）</option>
+                <option value="study">学习与专业（CC/英语）</option>
+                <option value="life">生活休闲（烘焙/假期）</option>
+              </select>
+            </div>
+            <div class="form-row"><label>标签</label><select id="pTaskTag"></select></div>
+          </div>
+          <div class="form-row"><label>轻重缓急</label>
+            <select id="pTaskPriority">
+              <option value="">不设置</option>
+              <option value="p1">🔴 重要且紧急</option>
+              <option value="p2" selected>🟢 重要不紧急</option>
+              <option value="p3">🟠 紧急不重要</option>
+              <option value="p4">⚪ 不重要不紧急</option>
+            </select>
+          </div>
+          <div class="grid-2" style="gap:8px">
+            <div class="form-row"><label>地点</label><input id="pTaskPlace" placeholder="例：家附近游泳馆"></div>
+            <div class="form-row"><label>提醒</label>
+              <select id="pTaskRemind">
+                <option value="15">提前 15 分钟</option>
+                <option value="30" selected>提前 30 分钟</option>
+                <option value="60">提前 1 小时</option>
+                <option value="0">不提醒</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row"><label>备注</label><input id="pTaskNote"></div>
+          <div class="grid-2" style="gap:8px">
+            <div class="form-row"><label>预计支出 ¥（可留空）</label><input type="number" id="pTaskCost" min="0" step="0.01"></div>
+            <div class="form-row"><label>从哪个池扣</label>
+              <select id="pTaskPool">
+                <option value="hobby">轻度爱好</option>
+                <option value="must">必须支出</option>
+                <option value="street">潮牌基金</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn full" type="submit">加入日程并生成 .ics</button>
+        </form>
+      </div>
+
+      <div>
+        <div class="card">
+          <div class="card-head">
+            <h3>本月日历</h3>
+            <button class="btn small ghost" id="pExportIcs">导出本月 .ics</button>
+          </div>
+          <div id="pMonthHead"></div>
+          <div id="pMonthGrid"></div>
+          <div class="toolbar" id="pTagFilter"></div>
+          <div id="pTaskList"></div>
+        </div>
+        <div class="card">
+          <h3>iOS 日历同步</h3>
+          <p class="muted">每条安排都会生成标准 .ics 代码。iPhone/iPad 操作：复制代码 → 存成 <code>.ics</code> 文件（备忘录/文件 App）→ 打开并选择「日历」导入。<br>也可用快捷指令：<code>shortcuts://run-shortcut?name=AddCalendarEvent&input=事件内容</code>，把「AddCalendarEvent」做成接收文本并添加日历事件的快捷指令。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 内容工坊 ================= -->
+  <section id="view-media" class="view">
+    <div class="grid-2">
+      <div class="card">
+        <h3>内容生成器</h3>
+        <div class="form-row"><label>平台</label>
+          <select id="mPlatform">
+            <option value="小红书">小红书（萌物图文）</option>
+            <option value="抖音">抖音（烘焙俯拍）</option>
+            <option value="Threads">Threads（温暖文字）</option>
+          </select>
+        </div>
+        <div class="form-row"><label>主题类型</label>
+          <select id="mType">
+            <option value="萌物">萌物分享</option>
+            <option value="烘焙">烘焙成品</option>
+          </select>
+        </div>
+        <div class="form-row"><label>名称</label><input id="mName" placeholder="例：轻松熊披萨碗 / 苹果派"></div>
+        <div class="form-row"><label>细节 / 心得（可选）</label><textarea id="mDetail" rows="3" placeholder="口味、手感、故事、价格…"></textarea></div>
+        <button class="btn full" id="mGenerate">生成文案 + 标签 + 排期</button>
+        <div id="mOutput" class="gen-output"></div>
+        <div class="toolbar"><button class="btn small ghost" id="mCopy">复制全文</button></div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <h3>排期发布建议</h3>
+          <div id="mSchedule"></div>
+        </div>
+        <div class="card">
+          <h3>极简出片方案</h3>
+          <div class="item">
+            <b>小红书 · 萌物</b>
+            <div class="item-sub" id="mShootXhs"></div>
+          </div>
+          <div class="item">
+            <b>抖音 · 烘焙</b>
+            <div class="item-sub" id="mShootDy"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>防盗图水印</h3>
+          <div class="form-row"><label>你的账号 ID</label><input id="mWatermark" placeholder="例：@YourID"></div>
+          <div id="mWatermarkPreview" class="gen-output">@YourID · 半透明水印预览</div>
+          <p class="muted">出图时叠加：白色 30% 透明度 · 斜向平铺 · 角落再放一个不透明小号。发现被盗图：平台投诉 → 提交原图与首发时间截图 → 要求下架；金额大可走著作权登记。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 口语与思考 ================= -->
+  <section id="view-thinking" class="view">
+    <div class="grid-2">
+      <div class="card">
+        <h3>今日深度思考</h3>
+        <div class="item">
+          <div id="tQuestion" class="item-title" style="font-size:15px">…</div>
+          <div class="item-sub">想清楚后，选一个微小物理行动，身体动起来。</div>
+        </div>
+        <div class="toolbar">
+          <select id="tAction">
+            <option>去游泳 30 分钟</option>
+            <option>清理一件无用物品</option>
+            <option>下楼走 10 分钟</option>
+            <option>整理一个抽屉</option>
+            <option>做一次烘焙</option>
+          </select>
+          <button class="btn small" id="tCheckin">打卡</button>
+          <button class="btn small ghost" id="tNext">换一题</button>
+        </div>
+        <div id="tStreak" class="result-box"></div>
+        <h3>行动记录</h3>
+        <div id="tLog"></div>
+      </div>
+
+      <div class="stack">
+        <div class="card">
+          <h3>逻辑英语口语教练</h3>
+          <p class="muted">把中文输入里的「就是/然后/呃」等填充词清掉，输出逻辑骨架 + 英文结构。</p>
+          <div class="form-row"><label>你的中文表达</label><textarea id="tCnInput" rows="3" placeholder="例：我就是觉得然后那个事情其实挺重要的…"></textarea></div>
+          <button class="btn full" id="tCoach">提炼</button>
+          <div id="tCoachOut" class="gen-output"></div>
+        </div>
+        <div class="card">
+          <h3>生活高频词汇</h3>
+          <form class="inline-form" id="tWordForm">
+            <input id="tWordCn" placeholder="中文（例：空调）" required>
+            <input id="tWordEn" placeholder="English" required>
+            <button class="btn" type="submit">添加</button>
+          </form>
+          <div id="tWords"></div>
+        </div>
+        <div class="card">
+          <h3>话题矩阵</h3>
+          <div class="tag-row" id="tTopics"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 文案编辑 ================= -->
+  <section id="view-copy" class="view">
+    <div class="card">
+      <div class="card-head">
+        <h3>文案与文字编辑</h3>
+        <span style="display:flex;gap:8px">
+          <button class="btn small ghost" id="cReset">恢复默认</button>
+          <button class="btn small" id="cSave">保存文字</button>
+        </span>
+      </div>
+      <p class="muted">所有提示文字都能在这里改，改完点「保存」立即生效。格式说明：思考题每行一条「话题|问题」；文案模板里 {name}、{detail} 会自动替换成你输入的内容。</p>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>深度思考题</h3>
+        <p class="muted">每行一条：<code>话题|问题</code></p>
+        <textarea id="cQuestions" rows="12"></textarea>
+      </div>
+      <div class="card">
+        <h3>英语填充词</h3>
+        <p class="muted">每行一个，检测到会统计并剔除。</p>
+        <textarea id="cFillers" rows="9"></textarea>
+      </div>
+      <div class="card">
+        <h3>英语骨架模板</h3>
+        <p class="muted">支持 <code>{topic}</code> 占位符。</p>
+        <textarea id="cSkeleton" rows="6"></textarea>
+      </div>
+      <div class="card">
+        <h3>内容文案模板（小红书 / 抖音 / Threads）</h3>
+        <p class="muted">每平台一段，用「平台：」开头，下面跟 标题/正文/标签/排期提示/排期时间，支持 <code>{name}</code> <code>{detail}</code>。</p>
+        <textarea id="cMedia" rows="16"></textarea>
+      </div>
+      <div class="card">
+        <h3>报销话术模板</h3>
+        <p class="muted">direct / probable / self 三段，支持 <code>{name}</code> <code>{amount}</code> <code>{note}</code>。</p>
+        <textarea id="cSpeech" rows="5"></textarea>
+      </div>
+      <div class="card">
+        <h3>护肤品拦截文案</h3>
+        <p class="muted">标题一行 + 正文一行，正文支持 <code>{list}</code>（未拆封存货列表）。</p>
+        <textarea id="cIntercept" rows="3"></textarea>
+      </div>
+      <div class="card">
+        <h3>临期食材消耗思路</h3>
+        <p class="muted">每行一条：<code>原料|思路</code>；没列到的原料会提示去搜做法。</p>
+        <textarea id="cUseup" rows="8"></textarea>
+      </div>
+      <div class="card">
+        <h3>出片方案</h3>
+        <p class="muted">每行一条：<code>平台：方案</code></p>
+        <textarea id="cShoot" rows="3"></textarea>
+      </div>
+      <div class="card">
+        <h3>总览界面文字</h3>
+        <p class="muted">也可以直接去总览页点「✎ 改字」后点文字改。这里按 <code>键：文字</code> 每行一条。</p>
+        <textarea id="cUi" rows="10"></textarea>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 外观 ================= -->
+  <section id="view-appearance" class="view">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-head">
+          <h3>主题与颜色</h3>
+          <button class="btn small ghost" id="aReset">恢复默认外观</button>
+        </div>
+        <p class="muted">护眼配色为主，轻重缓急、模块、标签都能用颜色区分。</p>
+        <div class="theme-grid" id="aThemeGrid"></div>
+        <div class="form-row" style="margin-top:12px"><label>自定义颜色（改完点保存）</label></div>
+        <div id="aColors"></div>
+        <button class="btn full" id="aSave">保存外观</button>
+      </div>
+
+      <div class="stack">
+        <div class="card">
+          <h3>背景</h3>
+          <div class="form-row"><label>背景类型</label>
+            <select id="aBgType">
+              <option value="none">无背景</option>
+              <option value="preset">内置图库</option>
+              <option value="image">上传图片</option>
+              <option value="url">图片链接</option>
+            </select>
+          </div>
+          <div class="bg-gallery" id="aBgGallery"></div>
+          <input type="file" id="aBgFile" accept="image/*" style="display:none">
+          <button class="btn small" id="aBgUpload">选择本地图片上传</button>
+          <div class="form-row" style="margin-top:8px"><label>或粘贴图片链接</label>
+            <input id="aBgUrl" placeholder="https://… 图片地址"></div>
+          <div class="form-row"><label>背景深浅（不透明度）</label>
+            <input type="range" id="aBgOpacity" min="0" max="0.5" step="0.05" value="0.15"></div>
+          <div class="kv"><span>预览</span><span id="aBgHint">当前：无背景</span></div>
+        </div>
+
+        <div class="card">
+          <h3>模块 / 标签颜色与表情</h3>
+          <p class="muted">给每个模块、标签选颜色和表情，日程和总览里会按颜色区分。</p>
+          <div id="aCatRows"></div>
+          <div id="aTagRows"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>轻重缓急分色</h3>
+      <p class="muted">日程事项按「重要 / 紧急」四象限分色显示。</p>
+      <div class="color-row"><label>🔴 重要且紧急</label><input type="color" data-pri="p1"></div>
+      <div class="color-row"><label>🟢 重要不紧急</label><input type="color" data-pri="p2"></div>
+      <div class="color-row"><label>🟠 紧急不重要</label><input type="color" data-pri="p3"></div>
+      <div class="color-row"><label>⚪ 不重要不紧急</label><input type="color" data-pri="p4"></div>
+      <button class="btn small" id="aSavePri">保存轻重缓急颜色</button>
+    </div>
+
+    <div class="card">
+      <h3>手机与电脑联动</h3>
+      <p class="muted">方法一：右上角「备份」导出文件，用微信/文件 App 传到另一台设备再「恢复」。<br>
+      方法二（推荐）：配置一个 WebDAV 云盘（免费可用的如坚果云），两边填同一份地址，自动双向同步。</p>
+      <div class="grid-2" style="gap:8px">
+        <div class="form-row"><label>WebDAV 服务器地址</label><input id="sServer" placeholder="https://dav.jianguoyun.com/dav/"></div>
+        <div class="form-row"><label>文件名（默认 lifehub.json）</label><input id="sFile" placeholder="lifehub.json"></div>
+      </div>
+      <div class="grid-2" style="gap:8px">
+        <div class="form-row"><label>账号</label><input id="sUser" placeholder="坚果云邮箱"></div>
+        <div class="form-row"><label>应用密码</label><input type="password" id="sPass" placeholder="坚果云「应用密码」"></div>
+      </div>
+      <div class="toolbar">
+        <label class="check" style="margin:0"><input type="checkbox" id="sAuto"> 保存后自动上传</label>
+        <button class="btn small" id="sTest">测试连接</button>
+        <button class="btn small" id="sPush">上传到云端</button>
+        <button class="btn small ghost" id="sPull">从云端拉取</button>
+      </div>
+      <div id="sStatus" class="item-sub">尚未配置同步。</div>
+    </div>
+  </section>
+
+  <!-- ================= 月底总结 ================= -->
+  <section id="view-monthly" class="view">
+    <div class="card">
+      <div class="card-head">
+        <h3>月底总结</h3>
+        <span style="display:flex;gap:8px">
+          <button class="btn small ghost" id="mCopy">复制总结</button>
+          <button class="btn small" id="mDownload">下载 .txt</button>
+        </span>
+      </div>
+      <p class="muted">自动汇总本月资金、烘焙、日程、内容与思考数据，每月底复盘用。</p>
+      <div id="mReport" class="gen-output" style="white-space:pre-wrap">…</div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  Life Architecture <span id="footerVersion">v0</span> · 数据保存在浏览器本地：升级时用新文件替换即可，已填内容不会丢 · 升级前建议先点「备份」
+</footer>
+
+<div id="toast" class="toast"></div>
+<div class="modal-mask" id="modalMask">
+  <div class="modal">
+    <h4 id="modalTitle"></h4>
+    <p id="modalBody"></p>
+    <div class="modal-actions">
+      <button class="btn ghost" id="modalCancel">放弃</button>
+      <button class="btn" id="modalOk">仍然加入冷静期</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/store.js"></script>
+<script src="js/theme.js"></script>
+<script src="js/finance.js"></script>
+<script src="js/baking.js"></script>
+<script src="js/planner.js"></script>
+<script src="js/media.js"></script>
+<script src="js/thinking.js"></script>
+<script src="js/copyedit.js"></script>
+<script src="js/sync.js"></script>
+<script src="js/monthly.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
